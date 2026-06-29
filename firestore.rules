@@ -1,0 +1,115 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Helpers ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function getUserRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && getUserRole() == 'administration';
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // --- Validations ---
+    function isValidUserProfile(data) {
+      return data.uid is string && data.uid == request.auth.uid &&
+             data.displayName is string && data.displayName.size() <= 100 &&
+             data.email is string && data.email.size() <= 100 &&
+             data.role in ['citizen', 'administration', 'contractor'] &&
+             data.points is number &&
+             data.rank is string &&
+             data.createdAt is string;
+    }
+
+    function isValidIssue(data) {
+      return data.title is string && data.title.size() <= 200 &&
+             data.description is string && data.description.size() <= 2000 &&
+             data.category is string &&
+             data.status in ['reported', 'verified', 'in-progress', 'resolved'] &&
+             data.reportedBy == request.auth.uid &&
+             data.votesCount is number &&
+             data.impactScore is number &&
+             data.createdAt is string &&
+             data.updatedAt is string &&
+             data.reporterName is string;
+    }
+
+    // --- Collections ---
+
+    match /users/{userId} {
+      allow read: if true;
+      allow create: if isOwner(userId) && isValidUserProfile(incoming());
+      allow update: if true;
+    }
+
+    match /issues/{issueId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidIssue(incoming());
+      allow update: if isSignedIn() && (
+        // Admin update: can change everything including budget/suggestions
+        isAdmin() ||
+        // User update: can only change specific fields or vote
+        (
+          isValidIssue(incoming()) && (
+            // Action: Vote
+            (incoming().diff(existing()).affectedKeys().hasOnly(['votesCount'])) ||
+            // Action: Resolve (must provide proof)
+            (
+              incoming().status == 'resolved' && 
+              existing().status != 'resolved' &&
+              incoming().resolvedImageUrl is string &&
+              incoming().diff(existing()).affectedKeys().hasOnly(['status', 'resolvedImageUrl', 'updatedAt'])
+            ) ||
+            // Action: Edit (only if they are the reporter)
+            (
+              existing().reportedBy == request.auth.uid &&
+              incoming().diff(existing()).affectedKeys().hasOnly(['title', 'description', 'category', 'imageUrl', 'videoUrl', 'updatedAt'])
+            )
+          )
+        )
+      );
+      allow delete: if isAdmin() || (isSignedIn() && existing().reportedBy == request.auth.uid);
+    }
+
+    match /notifications/{notificationId} {
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn();
+      allow update: if isSignedIn() && resource.data.userId == request.auth.uid && 
+                    request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
+      allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+
+    match /tenders/{tenderId} {
+      allow read, write: if isSignedIn();
+    }
+
+    match /contracts/{contractId} {
+      allow read, write: if isSignedIn();
+    }
+  }
+}

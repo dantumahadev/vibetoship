@@ -1,0 +1,69 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
+@import url('https://unpkg.com/leaflet@1.9.4/dist/leaflet.css');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Outfit", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  --color-gov-green: #112e20;
+  --color-gov-green-light: #1b3d2b;
+  --color-gov-green-dark: #091a12;
+  --color-sage-primary: #5c7a67;
+  --color-sage-light: #eaf0eb;
+  --color-sage-bg: #f4f6f4;
+  --color-gold-accent: #d4af37;
+  --color-gold-accent-hover: #bda02b;
+  --color-stone-bg: #f9fafb;
+}
+
+@layer base {
+  body {
+    @apply font-sans antialiased bg-[#f5f7f5] text-[#112e20];
+  }
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  @apply w-1.5 h-1.5;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  @apply bg-sage-primary/30 rounded-full hover:bg-sage-primary/50 transition-colors;
+}
+
+.leaflet-container {
+  filter: sepia(0.08) contrast(1.02) hue-rotate(5deg);
+}
+
+.glass-panel {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+.glass-panel-dark {
+  background: rgba(17, 46, 32, 0.75);
+  backdrop-filter: blur(20px) saturate(140%);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.glass-button {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-button:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.glass-card {
+  @apply bg-white/70 backdrop-blur-md border border-white/50 shadow-sm;
+}

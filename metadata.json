@@ -1,0 +1,6 @@
+{
+  "name": "Community Hero",
+  "description": "A high-fidelity administrative audit platform for infrastructure oversight and civic accountability.",
+  "requestFramePermissions": ["geolocation", "camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

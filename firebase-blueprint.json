@@ -1,0 +1,82 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "User account information and role",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "displayName": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string", "enum": ["citizen", "administration"] },
+        "points": { "type": "number" },
+        "rank": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "displayName", "email", "role", "points", "rank", "createdAt"]
+    },
+    "Issue": {
+      "title": "Community Issue",
+      "description": "A reported community problem with AI analysis",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "category": { "type": "string" },
+        "status": { "type": "string", "enum": ["reported", "verified", "in-progress", "resolved"] },
+        "location": {
+          "type": "object",
+          "properties": {
+            "lat": { "type": "number" },
+            "lng": { "type": "number" },
+            "address": { "type": "string" }
+          }
+        },
+        "imageUrl": { "type": "string" },
+        "reportedBy": { "type": "string" },
+        "reporterName": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "votesCount": { "type": "number" },
+        "impactScore": { "type": "number" },
+        "predictedEffects": { "type": "string" },
+        "dangerLevel": { "type": "string" },
+        "budget": { "type": "number" },
+        "suggestions": { "type": "string" },
+        "resolvedImageUrl": { "type": "string" }
+      },
+      "required": ["id", "title", "description", "category", "status", "location", "reportedBy", "reporterName", "createdAt", "updatedAt", "votesCount", "impactScore"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "Alert for a specific user",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "message": { "type": "string" },
+        "type": { "type": "string", "enum": ["issue_resolved", "issue_verified", "general"] },
+        "issueId": { "type": "string" },
+        "read": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "title", "message", "type", "read", "createdAt"]
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profiles keyed by UID"
+    },
+    "issues/{issueId}": {
+      "schema": "Issue",
+      "description": "Global collection of reported community issues"
+    },
+    "notifications/{notificationId}": {
+      "schema": "Notification",
+      "description": "User-specific alerts"
+    }
+  }
+}

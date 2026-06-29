@@ -1,0 +1,43 @@
+node_modules/
+build/
+dist/
+coverage/
+.DS_Store
+*.log
+.env*
+!.env.example
+
+# Secrets & Credentials
+credentials.json
+service-account-key.json
+*.pem
+*.key
+*.p12
+firebase-adminsdk-*.json
+
+# Firebase
+firebase-debug.log
+.firebase/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+*~
+
+# Database files
+*.db
+*.sqlite
+users_db.json
+issues_db.json
+
+# Uploads
+uploads/
