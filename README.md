@@ -512,17 +512,17 @@ This project is licensed under the **Apache 2.5 License** - see the [LICENSE](LI
 
 ## 🗺️ Roadmap
 
-### Q1 2025
+### Q1 2026
 - [ ] Mobile app (React Native)
 - [ ] Voice reporting (WhatsApp voice notes)
 - [ ] Offline mode with sync
 
-### Q2 2025
+### Q2 2026
 - [ ] AI-powered budget optimization
 - [ ] Blockchain for tender transparency
 - [ ] Drone integration for aerial surveys
 
-### Q3 2025
+### Q3 2026
 - [ ] Integration with more cities
 - [ ] Advanced analytics & ML dashboards
 - [ ] Citizen voting on priority issues
