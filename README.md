@@ -3,7 +3,6 @@
 <div align="center">
 
 ![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
-![License](https://img.shields.io/badge/license-Apache%202.5-green.svg)
 ![AI Powered](https://img.shields.io/badge/AI-Dual%20Brain%20Architecture-purple.svg)
 ![Status](https://img.shields.io/badge/status-production-success.svg)
 
