@@ -383,7 +383,6 @@ Validated Issue from Gemini
 ### Backend
 - **Express.js** (Node.js server)
 - **Firebase Admin SDK** for authentication & Firestore
-- **Groq API** for Llama model inference
 - **Google Vertex AI** for agentic conversational AI
 - **Twilio** for WhatsApp integration
 - **Nodemailer** for email automation
@@ -657,12 +656,6 @@ We welcome contributions! Here's how you can help:
 - Add comments for complex logic
 - Test on multiple screen sizes
 - Respect existing code style
-
----
-
-## 📜 License
-
-This project is licensed under the **Apache 2.5 License** - see the [LICENSE](LICENSE) file for details.
 
 ---
 
