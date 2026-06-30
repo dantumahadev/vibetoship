@@ -11,6 +11,7 @@ import dotenv from "dotenv";
 import nodemailer from "nodemailer";
 import twilio from "twilio";
 import * as admin from "firebase-admin";
+import { GoogleGenerativeAI, HarmBlockThreshold, HarmCategory } from "@google/generative-ai";
 
 dotenv.config();
 
@@ -25,8 +26,217 @@ try {
   console.log("[Firebase Admin] No application default credentials found. Falling back to local JSON DBs.");
 }
 
+// Initialize Google Gemini AI
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || process.env.GROK_API_KEY || "";
+const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
 
-// Local Llama Heuristic Inference Engine
+// Google Gemini AI Engine - Primary Brain
+class GeminiEngine {
+  static async analyzeVision(image: string) {
+    console.log("[Gemini Engine] Analyzing image with Gemini Vision...");
+    try {
+      const model = genAI.getGenerativeModel({ 
+        model: "gemini-1.5-flash",
+        generationConfig: {
+          responseMimeType: "application/json"
+        }
+      });
+
+      const prompt = `You are an expert municipal infrastructure analyst. Analyze this image and extract:
+{
+  "title": "Brief title of the infrastructure issue (string)",
+  "description": "Detailed description of what you see (string)",
+  "category": "One of: Roads, Water, Waste, Lights, Civic (string)"
+}`;
+
+      const result = await model.generateContent([
+        prompt,
+        {
+          inlineData: {
+            mimeType: image.startsWith("data:image/jpeg") ? "image/jpeg" : "image/png",
+            data: image.split(",")[1] || image
+          }
+        }
+      ]);
+
+      const text = result.response.text();
+      const parsed = JSON.parse(text);
+      return {
+        title: parsed.title || "Infrastructure Issue Detected",
+        description: parsed.description || "Issue detected in uploaded image",
+        category: parsed.category || "Civic"
+      };
+    } catch (err) {
+      console.warn("[Gemini Engine] Vision analysis failed:", err);
+      return LlamaEngine.analyzeVision(image);
+    }
+  }
+
+  static async analyzeText(title: string, description: string, category: string) {
+    console.log(`[Gemini Engine] Analyzing text with Gemini. Title: "${title}"`);
+    try {
+      const model = genAI.getGenerativeModel({ 
+        model: "gemini-1.5-flash",
+        generationConfig: {
+          responseMimeType: "application/json"
+        }
+      });
+
+      const prompt = `Analyze this civic infrastructure issue and return JSON:
+{
+  "severity": <1-10 integer>,
+  "dangerLevel": "Description of danger/risk",
+  "predictedEffects": "Predicted community impact",
+  "budget": <estimated repair cost in INR integer>,
+  "suggestions": "Recommended fix actions"
+}
+
+Issue: ${title}
+Details: ${description}
+Category: ${category}`;
+
+      const result = await model.generateContent(prompt);
+      const text = result.response.text();
+      const parsed = JSON.parse(text);
+
+      return {
+        severity: parsed.severity || 5,
+        dangerLevel: parsed.dangerLevel || "Moderate municipal concern",
+        predictedEffects: parsed.predictedEffects || "Localized community inconvenience",
+        budget: parsed.budget || 5000,
+        suggestions: parsed.suggestions || "Standard municipal repair required"
+      };
+    } catch (err) {
+      console.warn("[Gemini Engine] Text analysis failed:", err);
+      return LlamaEngine.analyzeText(title, description, category);
+    }
+  }
+
+  static async diagnoseInfrastructure(image: string) {
+    console.log("[Gemini Engine] Running structural diagnostics with Gemini Vision...");
+    try {
+      const model = genAI.getGenerativeModel({ 
+        model: "gemini-1.5-flash",
+        generationConfig: {
+          responseMimeType: "application/json"
+        }
+      });
+
+      const prompt = `You are a structural engineer. Analyze this infrastructure/transit image and return JSON:
+{
+  "isTransitIssue": <boolean - true for buses/trains, false for roads/bridges>,
+  "vehicleNumber": <string or null - if transit, predict vehicle ID like "RTC Bus AP 09 Z 4812">,
+  "transitAuthority": <"RTC" or "IRCTC" or null>,
+  "defects": [<array of defect strings>],
+  "integrityScore": <0-100 integer - structural health>,
+  "yearsToFailure": <float - estimated years before failure>,
+  "failureMode": <string - predicted failure scenario>,
+  "remediation": <string - recommended fix>
+}`;
+
+      const result = await model.generateContent([
+        prompt,
+        {
+          inlineData: {
+            mimeType: image.startsWith("data:image/jpeg") ? "image/jpeg" : "image/png",
+            data: image.split(",")[1] || image
+          }
+        }
+      ]);
+
+      const text = result.response.text();
+      const parsed = JSON.parse(text);
+
+      return {
+        isTransitIssue: !!parsed.isTransitIssue,
+        vehicleNumber: parsed.vehicleNumber || null,
+        transitAuthority: parsed.transitAuthority || null,
+        depotHoldDate: null,
+        depotHoldStatus: null,
+        defects: Array.isArray(parsed.defects) ? parsed.defects : ["General wear detected"],
+        integrityScore: parsed.integrityScore || 75,
+        yearsToFailure: parsed.yearsToFailure || 2.5,
+        failureMode: parsed.failureMode || "Structural degradation",
+        remediation: parsed.remediation || "Standard maintenance required"
+      };
+    } catch (err) {
+      console.warn("[Gemini Engine] Infrastructure diagnostics failed:", err);
+      return LlamaEngine.diagnoseInfrastructure(image);
+    }
+  }
+
+  static async verifyComplaint(title: string, description: string) {
+    console.log(`[Gemini Engine] Verifying complaint authenticity: "${title}"`);
+    try {
+      const model = genAI.getGenerativeModel({ 
+        model: "gemini-1.5-flash",
+        generationConfig: {
+          responseMimeType: "application/json"
+        }
+      });
+
+      const prompt = `Determine if this civic complaint is genuine or spam/AI-generated. Return JSON:
+{
+  "isGenuine": <boolean>,
+  "feedback": <string explaining decision>
+}
+
+Title: ${title}
+Description: ${description}`;
+
+      const result = await model.generateContent(prompt);
+      const text = result.response.text();
+      const parsed = JSON.parse(text);
+
+      return {
+        isGenuine: parsed.isGenuine !== false,
+        feedback: parsed.feedback || "Complaint appears genuine"
+      };
+    } catch (err) {
+      console.warn("[Gemini Engine] Complaint verification failed:", err);
+      return { isGenuine: true, feedback: "Verification unavailable, assumed genuine" };
+    }
+  }
+
+  static async generateEscalation(issue: any) {
+    console.log(`[Gemini Engine] Generating escalation for "${issue?.title}"`);
+    try {
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+      const prompt = `Generate escalation content for this unresolved civic issue. Return JSON:
+{
+  "letter": "Formal RTI letter to municipal ward commissioner",
+  "socialPost": "Viral social media post with hashtags"
+}
+
+Issue: ${issue?.title}
+Details: ${issue?.description}
+Category: ${issue?.category}`;
+
+      const result = await model.generateContent(prompt);
+      const text = result.response.text();
+      
+      // Try to parse JSON, if fails return text-based response
+      try {
+        const parsed = JSON.parse(text);
+        return {
+          letter: parsed.letter || text,
+          socialPost: parsed.socialPost || `🚨 Unresolved: ${issue?.title} #MunicipalAccountability`
+        };
+      } catch {
+        return {
+          letter: text,
+          socialPost: `🚨 ${issue?.title} remains unresolved! @MunicipalCorp #CivicAction #Infrastructure`
+        };
+      }
+    } catch (err) {
+      console.warn("[Gemini Engine] Escalation generation failed:", err);
+      return LlamaEngine.generateEscalation(issue);
+    }
+  }
+}
+
+// Fallback Local Heuristic Engine
 class LlamaEngine {
   static analyzeVision(image: string) {
     console.log("[Llama Engine] Analyzing image input...");
@@ -1023,7 +1233,7 @@ async function startServer() {
     try {
       const { image } = req.body;
       if (!image) return res.status(400).json({ error: "Image is required" });
-      const result = await GrokEngine.analyzeVision(image);
+      const result = await GeminiEngine.analyzeVision(image);
       res.json(result);
     } catch (error) {
       console.error("Grok Vision analysis failed:", error);
@@ -1035,7 +1245,7 @@ async function startServer() {
   app.post("/api/ai/analyze-new-issue", async (req, res) => {
     try {
       const { title, description, category } = req.body;
-      const result = await GrokEngine.analyzeText(title, description, category);
+      const result = await GeminiEngine.analyzeText(title, description, category);
       res.json(result);
     } catch (error) {
       console.error("Grok Issue analysis failed:", error);
@@ -1047,7 +1257,7 @@ async function startServer() {
   app.post("/api/ai/verify-resolution", async (req, res) => {
     try {
       const { issue, proofDescription } = req.body;
-      const result = await GrokEngine.verifyResolution(issue, proofDescription);
+      const result = await GeminiEngine.verifyResolution(issue, proofDescription);
       res.json(result);
     } catch (error) {
       console.error("Grok Resolution verification failed:", error);
@@ -1060,7 +1270,7 @@ async function startServer() {
     try {
       const { name, govIdNumber, heroType, image } = req.body;
       if (!image) return res.status(400).json({ error: "Image is required" });
-      const result = await GrokEngine.verifyGovId(name, govIdNumber, heroType, image);
+      const result = await GeminiEngine.verifyGovId(name, govIdNumber, heroType, image);
       res.json(result);
     } catch (error) {
       console.error("Grok Government ID verification failed:", error);
@@ -1075,7 +1285,7 @@ async function startServer() {
       if (!image) return res.status(400).json({ error: "Image is required" });
       
       console.log("[API] Starting infrastructure diagnostics...");
-      const result = await GrokEngine.diagnoseInfrastructure(image);
+      const result = await GeminiEngine.diagnoseInfrastructure(image);
       console.log("[API] Infrastructure diagnostics completed successfully");
       
       res.json(result);
@@ -1103,7 +1313,7 @@ async function startServer() {
     try {
       const { title, description } = req.body;
       if (!title) return res.status(400).json({ error: "Tender title is required" });
-      const stages = await GrokEngine.generateTimeline(title, description || "");
+      const stages = await GeminiEngine.generateTimeline(title, description || "");
       res.json({ stages });
     } catch (error) {
       console.error("AI Timeline generation failed:", error);
@@ -1117,7 +1327,7 @@ async function startServer() {
       const { image, stageTitle, metric, progressNotes } = req.body;
       if (!image) return res.status(400).json({ error: "Progress verification image is required" });
       if (!stageTitle || !metric) return res.status(400).json({ error: "Stage details and metric are required" });
-      const result = await GrokEngine.validateStageProgress(image, stageTitle, metric, progressNotes);
+      const result = await GeminiEngine.validateStageProgress(image, stageTitle, metric, progressNotes);
       res.json(result);
     } catch (error) {
       console.error("AI Progress validation failed:", error);
@@ -1426,7 +1636,7 @@ async function startServer() {
   async function processAndSaveComplaint(issue: any): Promise<any> {
     // 1. Authenticity check
     console.log(`[Validation Pipeline] Verifying complaint: "${issue.title}"`);
-    const verification = await GrokEngine.verifyComplaint(issue.title, issue.description || "");
+    const verification = await GeminiEngine.verifyComplaint(issue.title, issue.description || "");
     if (!verification.isGenuine) {
       throw new Error(`Complaint flagged as fake: ${verification.feedback}`);
     }
@@ -1538,10 +1748,10 @@ async function startServer() {
       if (numMedia > 0 && mediaUrl) {
         let visionAi = { title: "Infrastructure Issue", description: "Issue reported via WhatsApp image", category: "Civic" };
         try {
-          visionAi = await GrokEngine.analyzeVision(mediaUrl);
+          visionAi = await GeminiEngine.analyzeVision(mediaUrl);
         } catch(e) { console.warn("Vision analysis failed", e); }
         
-        const ai = await GrokEngine.analyzeText(
+        const ai = await GeminiEngine.analyzeText(
           convo.data.pendingTitle || visionAi.title,
           convo.data.pendingDesc || (body ? body + ". " + visionAi.description : visionAi.description),
           convo.data.pendingCategory || visionAi.category
@@ -1623,7 +1833,7 @@ async function startServer() {
       // ── CASE 4: Text description received ──
       if (body.length > 5) {
         // AI analyze the text
-        const ai = await GrokEngine.analyzeText(body, body, "Civic");
+        const ai = await GeminiEngine.analyzeText(body, body, "Civic");
         const issueId = `wa_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
         const phone = from.replace("whatsapp:", "");
 
@@ -2075,7 +2285,7 @@ async function startServer() {
   app.post("/api/ai/escalate", async (req, res) => {
     try {
       const { issue } = req.body;
-      const result = await GrokEngine.generateEscalation(issue);
+      const result = await GeminiEngine.generateEscalation(issue);
       res.json(result);
     } catch (error) {
       console.error("Grok Escalation failed:", error);
@@ -2087,7 +2297,7 @@ async function startServer() {
   app.post("/api/ai/predictive", async (req, res) => {
     try {
       const { issues } = req.body;
-      const result = await GrokEngine.predictiveFailures(issues || []);
+      const result = await GeminiEngine.predictiveFailures(issues || []);
       res.json(result);
     } catch (error) {
       console.error("Grok Prediction failed:", error);
@@ -2099,7 +2309,7 @@ async function startServer() {
   app.post("/api/ai/dispatch", async (req, res) => {
     try {
       const { query } = req.body;
-      const responseText = await GrokEngine.dispatchQuery(query);
+      const responseText = await GeminiEngine.dispatchQuery(query);
       res.json({ response: responseText });
     } catch (error) {
       console.error("Grok Dispatch failed:", error);
@@ -2111,7 +2321,7 @@ async function startServer() {
   app.post("/api/ai/listen", async (req, res) => {
     try {
       const { issues } = req.body;
-      const scriptText = await GrokEngine.listenDispatch(issues || []);
+      const scriptText = await GeminiEngine.listenDispatch(issues || []);
       res.json({ script: scriptText });
     } catch (error) {
       console.error("Grok Audio generation failed:", error);
